@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mikkel-andersen/nota/internal/store"
+	"github.com/mikkel-andersen/nota/domain"
 )
 
 func captureStdout(fn func()) string {
@@ -23,7 +23,7 @@ func captureStdout(fn func()) string {
 }
 
 func Test_render_plain(t *testing.T) {
-	notes := []store.Note{
+	notes := []domain.Note{
 		{ID: 1, Body: "hello", CreatedAt: time.Now().Add(-2 * time.Minute)},
 		{ID: 2, Body: "world", CreatedAt: time.Now().Add(-25 * time.Hour)},
 	}
@@ -40,7 +40,7 @@ func Test_render_plain(t *testing.T) {
 }
 
 func Test_render_json(t *testing.T) {
-	notes := []store.Note{
+	notes := []domain.Note{
 		{ID: 1, Body: "test note", CreatedAt: time.Now()},
 	}
 	out := captureStdout(func() { renderJSON(notes) })
@@ -60,9 +60,9 @@ func Test_format_age(t *testing.T) {
 		{0, "just now"},
 		{5 * time.Second, "just now"},
 		{59 * time.Second, "just now"},
-		{60 * time.Second, "1m ago"},  // boundary: exactly 1 minute
+		{60 * time.Second, "1m ago"},
 		{2 * time.Minute, "2m ago"},
-		{time.Hour, "1h ago"},          // boundary: exactly 1 hour
+		{time.Hour, "1h ago"},
 		{90 * time.Minute, "1h ago"},
 		{25 * time.Hour, "1d ago"},
 		{48 * time.Hour, "2d ago"},
