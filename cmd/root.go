@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -27,7 +28,9 @@ Pass text directly to add a new note.`,
 		if len(args) > 0 {
 			return addNote(strings.Join(args, " "))
 		}
-		return listNotes()
+		plain, _ := cmd.Flags().GetBool("plain")
+		asJSON, _ := cmd.Flags().GetBool("json")
+		return listNotes(plain, asJSON)
 	},
 }
 
@@ -146,7 +149,9 @@ var lsCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		all, _ := cmd.Flags().GetBool("all")
 		if !all {
-			return listNotes()
+			plain, _ := cmd.Flags().GetBool("plain")
+			asJSON, _ := cmd.Flags().GetBool("json")
+			return listNotes(plain, asJSON)
 		}
 		baseDir := filepath.Join(xdg.DataHome, "nota")
 		groups, err := store.AllNotes(baseDir)
@@ -215,7 +220,7 @@ func addNote(body string) error {
 	return nil
 }
 
-func listNotes() error {
+func listNotes(plain, asJSON bool) error {
 	s, err := getStore()
 	if err != nil {
 		return err
@@ -224,9 +229,19 @@ func listNotes() error {
 	if err != nil {
 		return err
 	}
+
+	if asJSON {
+		return renderJSON(notes)
+	}
 	if len(notes) == 0 {
-		cwd, _ := os.Getwd()
-		fmt.Printf("no notes for %s\n", cwd)
+		if !plain {
+			cwd, _ := os.Getwd()
+			fmt.Printf("no notes for %s\n", cwd)
+		}
+		return nil
+	}
+	if plain {
+		renderPlain(notes)
 		return nil
 	}
 
@@ -244,6 +259,18 @@ func listNotes() error {
 	return nil
 }
 
+func renderPlain(notes []store.Note) {
+	for _, n := range notes {
+		fmt.Printf("#%d  %s  (%s)\n", n.ID, n.Body, formatAge(n.CreatedAt))
+	}
+}
+
+func renderJSON(notes []store.Note) error {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(notes)
+}
+
 func formatAge(t time.Time) string {
 	d := time.Since(t)
 	switch {
@@ -259,7 +286,11 @@ func formatAge(t time.Time) string {
 }
 
 func Execute() {
+	rootCmd.Flags().BoolP("plain", "p", false, "plain output without ANSI codes")
+	rootCmd.Flags().BoolP("json", "j", false, "JSON output")
 	lsCmd.Flags().BoolP("all", "a", false, "show notes from all directories")
+	lsCmd.Flags().BoolP("plain", "p", false, "plain output without ANSI codes")
+	lsCmd.Flags().BoolP("json", "j", false, "JSON output")
 	rootCmd.AddCommand(deleteCmd, clearCmd, doneCmd, editCmd, lsCmd)
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
