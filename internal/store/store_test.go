@@ -290,3 +290,38 @@ func Test_list_preserves_done_flag(t *testing.T) {
 		t.Errorf("note #%d should not be done", pendingNote.ID)
 	}
 }
+
+func Test_update(t *testing.T) {
+	s := newTestStore(t)
+	n, err := s.Add("original")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Update(n.ID, "updated"); err != nil {
+		t.Fatal(err)
+	}
+	notes, _ := s.List()
+	if notes[0].Body != "updated" {
+		t.Errorf("expected body %q, got %q", "updated", notes[0].Body)
+	}
+}
+
+func Test_update_not_found(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.Update(999, "body"); err == nil {
+		t.Error("expected error for non-existent ID, got nil")
+	}
+}
+
+func Test_update_persists(t *testing.T) {
+	dir := t.TempDir()
+	s1, _ := New(dir)
+	n, _ := s1.Add("before")
+	s1.Update(n.ID, "after")
+
+	s2, _ := New(dir)
+	notes, _ := s2.List()
+	if notes[0].Body != "after" {
+		t.Errorf("update not persisted: got %q", notes[0].Body)
+	}
+}

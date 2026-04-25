@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -67,6 +68,73 @@ var doneCmd = &cobra.Command{
 			return err
 		}
 		fmt.Printf("note #%d done\n", id)
+		return nil
+	},
+}
+
+var editCmd = &cobra.Command{
+	Use:   "edit <id>",
+	Short: "Edit a note in $EDITOR",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("invalid id: %s", args[0])
+		}
+		s, err := getStore()
+		if err != nil {
+			return err
+		}
+		notes, err := s.List()
+		if err != nil {
+			return err
+		}
+		var current string
+		for _, n := range notes {
+			if n.ID == id {
+				current = n.Body
+				break
+			}
+		}
+		if current == "" {
+			return fmt.Errorf("note #%d not found", id)
+		}
+
+		f, err := os.CreateTemp("", "nota-*.txt")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(f.Name())
+		if _, err := f.WriteString(current); err != nil {
+			return err
+		}
+		f.Close()
+
+		editor := os.Getenv("EDITOR")
+		if editor == "" {
+			editor = "vi"
+		}
+		c := exec.Command(editor, f.Name())
+		c.Stdin = os.Stdin
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		if err := c.Run(); err != nil {
+			return err
+		}
+
+		updated, err := os.ReadFile(f.Name())
+		if err != nil {
+			return err
+		}
+		body := strings.TrimSpace(string(updated))
+		if body == "" || body == current {
+			fmt.Println("no changes")
+			return nil
+		}
+		if err := s.Update(id, body); err != nil {
+			return err
+		}
+		fmt.Printf("updated note #%d\n", id)
 		return nil
 	},
 }
@@ -155,7 +223,7 @@ func formatAge(t time.Time) string {
 }
 
 func Execute() {
-	rootCmd.AddCommand(deleteCmd, clearCmd, doneCmd)
+	rootCmd.AddCommand(deleteCmd, clearCmd, doneCmd, editCmd)
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
