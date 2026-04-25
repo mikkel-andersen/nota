@@ -44,10 +44,10 @@ func Test_render_json(t *testing.T) {
 		{ID: 1, Body: "test note", CreatedAt: time.Now()},
 	}
 	out := captureStdout(func() { renderJSON(notes) })
-	if !strings.Contains(out, `"Body": "test note"`) {
+	if !strings.Contains(out, `"body": "test note"`) {
 		t.Errorf("expected body in JSON output, got: %s", out)
 	}
-	if !strings.Contains(out, `"ID": 1`) {
+	if !strings.Contains(out, `"id": 1`) {
 		t.Errorf("expected id in JSON output, got: %s", out)
 	}
 }

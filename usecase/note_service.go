@@ -8,7 +8,6 @@ import (
 )
 
 var ErrNoChanges = errors.New("no changes")
-var ErrNoteNotFound = errors.New("note not found")
 
 type NoteService struct {
 	repo    Repository
@@ -57,7 +56,7 @@ func (s *NoteService) Edit(id int) error {
 		}
 	}
 	if current == "" {
-		return fmt.Errorf("%w: #%d", ErrNoteNotFound, id)
+		return fmt.Errorf("%w: #%d", domain.ErrNoteNotFound, id)
 	}
 	updated, err := s.editor.Open(current)
 	if err != nil {

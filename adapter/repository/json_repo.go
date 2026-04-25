@@ -10,6 +10,10 @@ import (
 	"github.com/mikkel-andersen/nota/domain"
 )
 
+func notFound(id int) error {
+	return fmt.Errorf("%w: #%d", domain.ErrNoteNotFound, id)
+}
+
 type jsonNote struct {
 	ID        int       `json:"id"`
 	Body      string    `json:"body"`
@@ -117,7 +121,7 @@ func (r *JSONRepo) Update(id int, body string) error {
 			return r.save(d)
 		}
 	}
-	return fmt.Errorf("note #%d not found", id)
+	return notFound(id)
 }
 
 func (r *JSONRepo) MarkDone(id int) error {
@@ -131,7 +135,7 @@ func (r *JSONRepo) MarkDone(id int) error {
 			return r.save(d)
 		}
 	}
-	return fmt.Errorf("note #%d not found", id)
+	return notFound(id)
 }
 
 func (r *JSONRepo) Clear() error {

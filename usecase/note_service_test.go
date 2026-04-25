@@ -175,8 +175,8 @@ func Test_service_edit_no_changes(t *testing.T) {
 func Test_service_edit_not_found(t *testing.T) {
 	svc := newService(&mockRepo{})
 	err := svc.Edit(999)
-	if !errors.Is(err, ErrNoteNotFound) {
-		t.Errorf("expected ErrNoteNotFound, got %v", err)
+	if !errors.Is(err, domain.ErrNoteNotFound) {
+		t.Errorf("expected domain.ErrNoteNotFound, got %v", err)
 	}
 }
 

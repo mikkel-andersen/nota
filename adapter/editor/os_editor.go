@@ -22,7 +22,9 @@ func (e *OSEditor) Open(content string) (string, error) {
 	if _, err := f.WriteString(content); err != nil {
 		return "", err
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		return "", err
+	}
 
 	name := os.Getenv("EDITOR")
 	if name == "" {
