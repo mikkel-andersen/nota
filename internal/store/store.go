@@ -107,6 +107,20 @@ func (s *Store) MarkDone(id int) error {
 	return fmt.Errorf("note #%d not found", id)
 }
 
+func (s *Store) Update(id int, body string) error {
+	d, err := s.load()
+	if err != nil {
+		return err
+	}
+	for i, n := range d.Notes {
+		if n.ID == id {
+			d.Notes[i].Body = body
+			return s.save(d)
+		}
+	}
+	return fmt.Errorf("note #%d not found", id)
+}
+
 func (s *Store) Clear() error {
 	d, err := s.load()
 	if err != nil {
