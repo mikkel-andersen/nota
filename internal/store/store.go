@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,6 +12,7 @@ type Note struct {
 	ID        int       `json:"id"`
 	Body      string    `json:"body"`
 	CreatedAt time.Time `json:"created_at"`
+	Done      bool      `json:"done"`
 }
 
 type Store struct {
@@ -89,6 +91,20 @@ func (s *Store) Delete(id int) error {
 	}
 	d.Notes = notes
 	return s.save(d)
+}
+
+func (s *Store) MarkDone(id int) error {
+	d, err := s.load()
+	if err != nil {
+		return err
+	}
+	for i, n := range d.Notes {
+		if n.ID == id {
+			d.Notes[i].Done = true
+			return s.save(d)
+		}
+	}
+	return fmt.Errorf("note #%d not found", id)
 }
 
 func (s *Store) Clear() error {
