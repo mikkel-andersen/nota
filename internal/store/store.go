@@ -18,7 +18,8 @@ type Store struct {
 }
 
 type data struct {
-	Notes []Note `json:"notes"`
+	Notes  []Note `json:"notes"`
+	NextID int    `json:"next_id"`
 }
 
 func New(dir string) (*Store, error) {
@@ -53,11 +54,8 @@ func (s *Store) Add(body string) (Note, error) {
 	if err != nil {
 		return Note{}, err
 	}
-	id := 1
-	if len(d.Notes) > 0 {
-		id = d.Notes[len(d.Notes)-1].ID + 1
-	}
-	n := Note{ID: id, Body: body, CreatedAt: time.Now()}
+	d.NextID++
+	n := Note{ID: d.NextID, Body: body, CreatedAt: time.Now()}
 	d.Notes = append(d.Notes, n)
 	return n, s.save(d)
 }
