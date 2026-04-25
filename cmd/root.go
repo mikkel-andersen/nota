@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -139,6 +140,41 @@ var editCmd = &cobra.Command{
 	},
 }
 
+var lsCmd = &cobra.Command{
+	Use:   "ls",
+	Short: "List notes (--all to show all directories)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		all, _ := cmd.Flags().GetBool("all")
+		if !all {
+			return listNotes()
+		}
+		baseDir := filepath.Join(xdg.DataHome, "nota")
+		groups, err := store.AllNotes(baseDir)
+		if err != nil {
+			return err
+		}
+		if len(groups) == 0 {
+			fmt.Println("no notes found")
+			return nil
+		}
+		paths := make([]string, 0, len(groups))
+		for p := range groups {
+			paths = append(paths, p)
+		}
+		sort.Strings(paths)
+		for _, p := range paths {
+			fmt.Printf("\033[1m%s\033[0m\n", p)
+			fmt.Println(strings.Repeat("─", 48))
+			for _, n := range groups[p] {
+				age := formatAge(n.CreatedAt)
+				fmt.Printf("  \033[2m#%d\033[0m  %s  \033[2m(%s)\033[0m\n", n.ID, n.Body, age)
+			}
+			fmt.Println()
+		}
+		return nil
+	},
+}
+
 var clearCmd = &cobra.Command{
 	Use:   "clear",
 	Short: "Delete all notes for the current directory",
@@ -223,7 +259,8 @@ func formatAge(t time.Time) string {
 }
 
 func Execute() {
-	rootCmd.AddCommand(deleteCmd, clearCmd, doneCmd, editCmd)
+	lsCmd.Flags().BoolP("all", "a", false, "show notes from all directories")
+	rootCmd.AddCommand(deleteCmd, clearCmd, doneCmd, editCmd, lsCmd)
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}

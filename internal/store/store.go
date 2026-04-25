@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -119,6 +120,35 @@ func (s *Store) Update(id int, body string) error {
 		}
 	}
 	return fmt.Errorf("note #%d not found", id)
+}
+
+func AllNotes(baseDir string) (map[string][]Note, error) {
+	result := make(map[string][]Note)
+	entries, err := os.ReadDir(baseDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return result, nil
+		}
+		return nil, err
+	}
+	replacer := strings.NewReplacer("_", "/")
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		p := filepath.Join(baseDir, e.Name(), "notes.json")
+		b, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		var d data
+		if err := json.Unmarshal(b, &d); err != nil || len(d.Notes) == 0 {
+			continue
+		}
+		original := replacer.Replace(e.Name())
+		result[original] = d.Notes
+	}
+	return result, nil
 }
 
 func (s *Store) Clear() error {
