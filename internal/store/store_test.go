@@ -227,3 +227,66 @@ func Test_migration_from_legacy_json(t *testing.T) {
 		t.Errorf("expected ID 6 after migrating legacy file with max ID 5, got %d", n.ID)
 	}
 }
+
+func Test_mark_done(t *testing.T) {
+	s := newTestStore(t)
+	n, err := s.Add("finish the feature")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MarkDone(n.ID); err != nil {
+		t.Fatalf("MarkDone: %v", err)
+	}
+	notes, err := s.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !notes[0].Done {
+		t.Error("expected note to be marked done")
+	}
+}
+
+func Test_mark_done_unknown_id(t *testing.T) {
+	s := newTestStore(t)
+	if _, err := s.Add("a note"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MarkDone(999); err == nil {
+		t.Fatal("expected error for unknown ID, got nil")
+	}
+}
+
+func Test_list_preserves_done_flag(t *testing.T) {
+	s := newTestStore(t)
+	n1, err := s.Add("done task")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Add("pending task"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MarkDone(n1.ID); err != nil {
+		t.Fatal(err)
+	}
+	notes, err := s.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(notes) != 2 {
+		t.Fatalf("expected 2 notes, got %d", len(notes))
+	}
+	var doneNote, pendingNote Note
+	for _, n := range notes {
+		if n.ID == n1.ID {
+			doneNote = n
+		} else {
+			pendingNote = n
+		}
+	}
+	if !doneNote.Done {
+		t.Errorf("note #%d should be done", n1.ID)
+	}
+	if pendingNote.Done {
+		t.Errorf("note #%d should not be done", pendingNote.ID)
+	}
+}

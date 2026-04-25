@@ -50,6 +50,27 @@ var deleteCmd = &cobra.Command{
 	},
 }
 
+var doneCmd = &cobra.Command{
+	Use:   "done <id>",
+	Short: "Mark a note as done",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("invalid id: %s", args[0])
+		}
+		s, err := getStore()
+		if err != nil {
+			return err
+		}
+		if err := s.MarkDone(id); err != nil {
+			return err
+		}
+		fmt.Printf("note #%d done\n", id)
+		return nil
+	},
+}
+
 var clearCmd = &cobra.Command{
 	Use:   "clear",
 	Short: "Delete all notes for the current directory",
@@ -110,7 +131,11 @@ func listNotes() error {
 	fmt.Println(strings.Repeat("─", 48))
 	for _, n := range notes {
 		age := formatAge(n.CreatedAt)
-		fmt.Printf("  \033[2m#%d\033[0m  %s  \033[2m(%s)\033[0m\n", n.ID, n.Body, age)
+		if n.Done {
+			fmt.Printf("  \033[2m#%d\033[0m  \033[9m%s\033[0m  \033[2m✓ (%s)\033[0m\n", n.ID, n.Body, age)
+		} else {
+			fmt.Printf("  \033[2m#%d\033[0m  %s  \033[2m(%s)\033[0m\n", n.ID, n.Body, age)
+		}
 	}
 	return nil
 }
@@ -130,7 +155,7 @@ func formatAge(t time.Time) string {
 }
 
 func Execute() {
-	rootCmd.AddCommand(deleteCmd, clearCmd)
+	rootCmd.AddCommand(deleteCmd, clearCmd, doneCmd)
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
