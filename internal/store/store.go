@@ -18,7 +18,8 @@ type Store struct {
 }
 
 type data struct {
-	Notes []Note `json:"notes"`
+	Notes  []Note `json:"notes"`
+	NextID int    `json:"next_id"`
 }
 
 func New(dir string) (*Store, error) {
@@ -37,7 +38,18 @@ func (s *Store) load() (data, error) {
 	if err != nil {
 		return d, err
 	}
-	return d, json.Unmarshal(b, &d)
+	if err := json.Unmarshal(b, &d); err != nil {
+		return d, err
+	}
+	// migrate: derive NextID from max existing ID for files written before next_id was tracked
+	if d.NextID == 0 && len(d.Notes) > 0 {
+		for _, n := range d.Notes {
+			if n.ID > d.NextID {
+				d.NextID = n.ID
+			}
+		}
+	}
+	return d, nil
 }
 
 func (s *Store) save(d data) error {
@@ -53,11 +65,8 @@ func (s *Store) Add(body string) (Note, error) {
 	if err != nil {
 		return Note{}, err
 	}
-	id := 1
-	if len(d.Notes) > 0 {
-		id = d.Notes[len(d.Notes)-1].ID + 1
-	}
-	n := Note{ID: id, Body: body, CreatedAt: time.Now()}
+	d.NextID++
+	n := Note{ID: d.NextID, Body: body, CreatedAt: time.Now()}
 	d.Notes = append(d.Notes, n)
 	return n, s.save(d)
 }
@@ -83,5 +92,9 @@ func (s *Store) Delete(id int) error {
 }
 
 func (s *Store) Clear() error {
-	return s.save(data{})
+	d, err := s.load()
+	if err != nil {
+		return err
+	}
+	return s.save(data{NextID: d.NextID})
 }
