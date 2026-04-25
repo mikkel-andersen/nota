@@ -325,3 +325,54 @@ func Test_update_persists(t *testing.T) {
 		t.Errorf("update not persisted: got %q", notes[0].Body)
 	}
 }
+
+func Test_all_notes_empty_dir(t *testing.T) {
+	result, err := AllNotes(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result) != 0 {
+		t.Errorf("expected empty result, got %d entries", len(result))
+	}
+}
+
+func Test_all_notes_nonexistent_dir(t *testing.T) {
+	result, err := AllNotes("/tmp/nota-does-not-exist-xyz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result) != 0 {
+		t.Errorf("expected empty result for missing dir, got %d", len(result))
+	}
+}
+
+func Test_all_notes_returns_notes_from_multiple_dirs(t *testing.T) {
+	base := t.TempDir()
+	payload := `{"notes":[{"id":1,"body":"test","created_at":"2024-01-01T00:00:00Z"}],"next_id":1}`
+	for _, dir := range []string{"_home_user_proj1", "_home_user_proj2"} {
+		p := filepath.Join(base, dir)
+		os.MkdirAll(p, 0755)
+		os.WriteFile(filepath.Join(p, "notes.json"), []byte(payload), 0644)
+	}
+	result, err := AllNotes(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result) != 2 {
+		t.Errorf("expected 2 entries, got %d", len(result))
+	}
+}
+
+func Test_all_notes_skips_empty_stores(t *testing.T) {
+	base := t.TempDir()
+	p := filepath.Join(base, "_home_user_proj")
+	os.MkdirAll(p, 0755)
+	os.WriteFile(filepath.Join(p, "notes.json"), []byte(`{"notes":[],"next_id":0}`), 0644)
+	result, err := AllNotes(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result) != 0 {
+		t.Errorf("expected 0 entries for empty store, got %d", len(result))
+	}
+}
